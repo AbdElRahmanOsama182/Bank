@@ -28,15 +28,20 @@ public class AccountController {
     @PostMapping
     public ResponseEntity<?> createAccount(@Valid @RequestBody AccountCreationRequest request) {
         try {
+            log.info("Creating account for user from Postman: {}", request.getUserId());
+            accountService.sendLog(request, "Request");
             AccountResponse response = accountService.createAccount(request);
+            accountService.sendLog(response,"Response");
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (RuntimeException e) {
             log.error("Account creation failed: {}", e.getMessage());
+
             ErrorResponse response = ErrorResponse.builder()
                     .status(HttpStatus.BAD_REQUEST.value())
                     .error("Bad Request")
                     .message(e.getMessage())
                     .build();
+            accountService.sendLog(response, "Response");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }

@@ -7,15 +7,18 @@ import com.example.accountservice.dto.TransferResponse;
 import com.example.accountservice.model.Account;
 import com.example.accountservice.enums.AccountStatus;
 import com.example.accountservice.repository.AccountRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,10 +29,12 @@ public class AccountService {
     
     private final AccountRepository accountRepository;
     private final UserValidationService userValidationService;
-    
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
+
+
     public AccountResponse createAccount(AccountCreationRequest request) {
         log.info("Creating account for user: {}", request.getUserId());
-        
         // Validate that the user exists before creating an account
         if (!userValidationService.validateUserExists(request.getUserId())) {
             throw new RuntimeException("User with ID " + request.getUserId() + " does not exist");
@@ -160,4 +165,30 @@ public class AccountService {
         
         return accountNumber;
     }
+
+
+    public void sendLog(String message, String messageType) {
+        Map<String, Object> payload = Map.of(
+                "message", message,
+                "messageType", messageType,
+                "dateTime", Instant.now().toString());
+
+        try {
+            String json = new ObjectMapper().writeValueAsString(payload);
+            kafkaTemplate.send("logging-topic", json);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+    }
+    public void  sendLog(Object json,String messageType) {
+            try {
+                String flattenJSON = objectMapper.writeValueAsString(json);
+                log.info("Sending log to Kafka: {}", flattenJSON);
+                sendLog(flattenJSON, messageType);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+
+    }
+
 } 

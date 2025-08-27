@@ -26,7 +26,9 @@ public class TransactionController {
     @PostMapping("/transfer/initiation")
     public ResponseEntity<?> initiateTransfer(@Valid @RequestBody TransferInitiationRequest request) {
         try {
+            transactionService.sendLog(request, "Request");
             TransactionResponse response = transactionService.initiateTransfer(request);
+            transactionService.sendLog(response, "Response");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             log.error("Transfer initiation failed: {}", e.getMessage());
@@ -35,6 +37,7 @@ public class TransactionController {
                     .error("Bad Request")
                     .message(e.getMessage())
                     .build();
+            transactionService.sendLog(response, "Response");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
@@ -42,7 +45,9 @@ public class TransactionController {
     @PostMapping("/transfer/execution")
     public ResponseEntity<?> executeTransfer(@Valid @RequestBody TransferExecutionRequest request) {
         try {
+            transactionService.sendLog(request, "Request");
             TransactionResponse response = transactionService.executeTransfer(request);
+            transactionService.sendLog(response, "Response");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             log.error("Transfer execution failed: {}", e.getMessage());
@@ -51,6 +56,7 @@ public class TransactionController {
                     .error("Bad Request")
                     .message(e.getMessage())
                     .build();
+            transactionService.sendLog(response, "Response");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
@@ -58,7 +64,10 @@ public class TransactionController {
     @GetMapping("/accounts/{accountId}")
     public ResponseEntity<?> getAccountTransactions(@PathVariable UUID accountId) {
         try {
+            String request = "Get /transactions/accounts/" + accountId;
+            transactionService.sendLog(request, "Request");
             List<TransactionResponse> response = transactionService.getAccountTransactions(accountId);
+            transactionService.sendLog(response, "Response");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             log.error("Transaction retrieval failed: {}", e.getMessage());
@@ -67,6 +76,7 @@ public class TransactionController {
                     .error("Not Found")
                     .message(e.getMessage())
                     .build();
+            transactionService.sendLog(response, "Response");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }

@@ -5,11 +5,15 @@ import com.example.userservice.dto.UserRegistrationRequest;
 import com.example.userservice.dto.UserResponse;
 import com.example.userservice.model.User;
 import com.example.userservice.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -19,6 +23,8 @@ public class UserService {
     
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
     
     public UserResponse registerUser(UserRegistrationRequest request) {
         log.info("Registering new user: {}", request.getUsername());
@@ -74,5 +80,28 @@ public class UserService {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .build();
+    }
+    public void sendLog(String message, String messageType) {
+        Map<String, Object> payload = Map.of(
+                "message", message,
+                "messageType", messageType,
+                "dateTime", Instant.now().toString());
+
+        try {
+            String json = new ObjectMapper().writeValueAsString(payload);
+            kafkaTemplate.send("logging-topic", json);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+    }
+    public void  sendLog(Object json,String messageType) {
+        try {
+            String flattenJSON = objectMapper.writeValueAsString(json);
+            log.info("Sending log to Kafka: {}", flattenJSON);
+            sendLog(flattenJSON, messageType);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
     }
 } 

@@ -6,12 +6,17 @@ import com.example.transactionservice.dto.TransactionResponse;
 import com.example.transactionservice.enums.TransactionStatus;
 import com.example.transactionservice.model.Transaction;
 import com.example.transactionservice.repository.TransactionRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -22,6 +27,8 @@ public class TransactionService {
     
     private final TransactionRepository transactionRepository;
     private final AccountTransactionService accountTransactionService;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
     
     @Value("${account.service.url}")
     private String accountServiceUrl;
@@ -118,5 +125,28 @@ public class TransactionService {
                         .status(transaction.getStatus())
                         .build())
                 .collect(Collectors.toList());
+    }
+    public void sendLog(String message, String messageType) {
+        Map<String, Object> payload = Map.of(
+                "message", message,
+                "messageType", messageType,
+                "dateTime", Instant.now().toString());
+
+        try {
+            String json = new ObjectMapper().writeValueAsString(payload);
+            kafkaTemplate.send("logging-topic", json);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+    }
+    public void  sendLog(Object json,String messageType) {
+        try {
+            String flattenJSON = objectMapper.writeValueAsString(json);
+            log.info("Sending log to Kafka: {}", flattenJSON);
+            sendLog(flattenJSON, messageType);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
     }
 } 

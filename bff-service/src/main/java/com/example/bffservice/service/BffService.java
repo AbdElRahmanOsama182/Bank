@@ -3,15 +3,22 @@ package com.example.bffservice.service;
 import com.example.bffservice.dto.DashboardResponse;
 import com.example.transactionservice.dto.TransactionResponse;
 import com.example.bffservice.model.UserAccount;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.core.ParameterizedTypeReference;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
+import org.springframework.kafka.core.KafkaTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
@@ -21,7 +28,11 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 public class BffService {
     
     private final WebClient webClient;
-    
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
+
+
+
     @Value("${user.service.url}")
     private String userServiceUrl;
     
@@ -96,5 +107,28 @@ public class BffService {
             log.warn("Failed to get accounts with transactions for user {}: {}", userId, e.getMessage());
             return List.of();
         }
+    }
+    public void sendLog(String message, String messageType) {
+        Map<String, Object> payload = Map.of(
+                "message", message,
+                "messageType", messageType,
+                "dateTime", Instant.now().toString());
+
+        try {
+            String json = new ObjectMapper().writeValueAsString(payload);
+            kafkaTemplate.send("logging-topic", json);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+    }
+    public void  sendLog(Object json,String messageType) {
+        try {
+            String flattenJSON = objectMapper.writeValueAsString(json);
+            log.info("Sending log to Kafka: {}", flattenJSON);
+            sendLog(flattenJSON, messageType);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
     }
 } 

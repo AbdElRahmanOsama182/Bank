@@ -49,7 +49,10 @@ public class AccountController {
     @GetMapping("/{accountId}")
     public ResponseEntity<?> getAccount(@PathVariable UUID accountId) {
         try {
+            String request = "Get /accounts/" + accountId;
+            accountService.sendLog(request, "Request");
             AccountResponse response = accountService.getAccount(accountId);
+            accountService.sendLog(response, "Response");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             log.error("Account retrieval failed: {}", e.getMessage());
@@ -58,6 +61,7 @@ public class AccountController {
                     .error("Not Found")
                     .message(e.getMessage())
                     .build();
+            accountService.sendLog(response, "Response");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }
@@ -65,7 +69,10 @@ public class AccountController {
     @GetMapping("/users/{userId}/accounts")
     public ResponseEntity<?> getUserAccounts(@PathVariable UUID userId) {
         try {
+            String request = "Get /accounts/users/" + userId + "/accounts";
+            accountService.sendLog(request, "Request");
             List<AccountResponse> response = accountService.getUserAccounts(userId);
+            accountService.sendLog(response,"Response");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             log.error("User accounts retrieval failed: {}", e.getMessage());
@@ -74,6 +81,7 @@ public class AccountController {
                     .error("Not Found")
                     .message(e.getMessage())
                     .build();
+            accountService.sendLog(response, "Response");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }
@@ -81,7 +89,9 @@ public class AccountController {
     @PutMapping("/transfer")
     public ResponseEntity<?> updateAccountBalance(@Valid @RequestBody TransferRequest request) {
         try {
+            accountService.sendLog(request, "Request");
             TransferResponse response = accountService.updateAccountBalance(request);
+            accountService.sendLog(response, "Response");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             log.error("Account balance update failed: {}", e.getMessage());
@@ -90,6 +100,7 @@ public class AccountController {
                     .error("Bad Request")
                     .message(e.getMessage())
                     .build();
+            accountService.sendLog(response, "Response");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
